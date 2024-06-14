@@ -4,15 +4,24 @@
 #include <netinet/ip.h>
 #include <netinet/ether.h>
 #include <arpa/inet.h>
+#include <string.h>
 
 // 回调函数，用于处理每个捕获的数据包
 void packetHandler(u_char *userData, const struct pcap_pkthdr *pkthdr, const u_char *packet) {
     std::ofstream *outfile = reinterpret_cast<std::ofstream*>(userData);
 
-    // 提取时间戳
+    // 提取时间戳,并进行格式化
     timeval ts = pkthdr->ts;
     char timestamp[64];
     snprintf(timestamp, sizeof(timestamp), "%ld", ts.tv_sec);
+
+    // 提取时间戳的后四位字符
+    char last_four[5];  // 用来存储后四位字符的数组，包括字符串末尾的 '\0'
+    if (strlen(timestamp) >= 4) {
+        strcpy(last_four, timestamp + strlen(timestamp) - 4);
+    } else {
+        strcpy(last_four, timestamp);  // 如果字符串长度不足四位，则复制整个字符串
+    }
 
     // 以太网头部
     const struct ether_header *eth_header;
@@ -32,7 +41,7 @@ void packetHandler(u_char *userData, const struct pcap_pkthdr *pkthdr, const u_c
         inet_ntop(AF_INET, &(ip_header->ip_dst), dst_ip, INET_ADDRSTRLEN);
         
         // 写入输出文件
-        *outfile << timestamp << " " << src_ip << " " << dst_ip << std::endl;
+        *outfile << last_four << " " << src_ip << "-" << dst_ip << std::endl;
     }
 }
 
@@ -66,3 +75,6 @@ int main(int argc, char *argv[]) {
     outfile.close();
     return 0;
 }
+
+//g++ gen.cpp -o gen -lpcap
+//./gen ../small-pcap/0.pcap key.txt
