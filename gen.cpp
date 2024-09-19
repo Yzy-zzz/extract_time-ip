@@ -4,6 +4,8 @@
 #include <netinet/ip.h>
 #include <netinet/ether.h>
 #include <arpa/inet.h>
+#include <sstream>
+#include <iomanip>
 #include <string.h>
 
 // 回调函数，用于处理每个捕获的数据包
@@ -35,13 +37,39 @@ void packetHandler(u_char *userData, const struct pcap_pkthdr *pkthdr, const u_c
         // 源IP地址
         char src_ip[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &(ip_header->ip_src), src_ip, INET_ADDRSTRLEN);
+
+        // 用临时变量存储每一段 IP 地址
+        unsigned int octet1, octet2, octet3, octet4;
+
+        sscanf(src_ip, "%u.%u.%u.%u", &octet1, &octet2, &octet3, &octet4);
+
+            // 创建一个字符串流来格式化填充零的 IP 地址
+        std::stringstream formatted_ip_src;
+        formatted_ip_src << std::setw(3) << std::setfill('0') << octet1 << '.'
+                    << std::setw(3) << std::setfill('0') << octet2 << '.'
+                    << std::setw(3) << std::setfill('0') << octet3 << '.'
+                    << std::setw(3) << std::setfill('0') << octet4;
+        
+
         
         // 目的IP地址
         char dst_ip[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &(ip_header->ip_dst), dst_ip, INET_ADDRSTRLEN);
+
+        sscanf(dst_ip, "%u.%u.%u.%u", &octet1, &octet2, &octet3, &octet4);
+
+        std::stringstream formatted_ip_dst;
+        formatted_ip_dst << std::setw(3) << std::setfill('0') << octet1 << '.'
+                    << std::setw(3) << std::setfill('0') << octet2 << '.'
+                    << std::setw(3) << std::setfill('0') << octet3 << '.'
+                    << std::setw(3) << std::setfill('0') << octet4;
         
         // 写入输出文件
-        *outfile << last_four << " " << src_ip << "-" << dst_ip << std::endl;
+        // *outfile << last_four << " " << src_ip << "-" << dst_ip << std::endl;
+
+        //只写入src_ip-dst_ip
+        *outfile << formatted_ip_src.str() << "-" << formatted_ip_dst.str() << std::endl;
+
     }
 }
 
@@ -56,7 +84,7 @@ int main(int argc, char *argv[]) {
 
     // 打开PCAP文件
     handle = pcap_open_offline(argv[1], errbuf);
-    if (handle == nullptr) {
+    if (handle == NULL) {
         std::cerr << "pcap_open_offline() failed: " << errbuf << std::endl;
         return 1;
     }
